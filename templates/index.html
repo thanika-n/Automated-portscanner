@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Port Scanner - Network Security Tool</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="grain-overlay"></div>
+    
+    <div class="container">
+        <header class="header">
+            <div class="logo">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M12 6v6l4 2"/>
+                    </svg>
+                </div>
+                <h1>PortScan<span class="accent">Pro</span></h1>
+            </div>
+            <button class="history-toggle" onclick="toggleHistory()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                    <path d="M3 3v5h5"/>
+                </svg>
+                History
+            </button>
+        </header>
+
+        <main class="main-content">
+            <div class="scanner-section" id="scannerSection">
+                <div class="scan-card">
+                    <div class="card-header">
+                        <h2>Network Port Scanner</h2>
+                        <p>Analyze network security and discover open ports</p>
+                    </div>
+
+                    <form id="scanForm" class="scan-form">
+                        <div class="form-group">
+                            <label for="url">Target URL or Domain</label>
+                            <input 
+                                type="text" 
+                                id="url" 
+                                placeholder="example.com or https://example.com"
+                                required
+                            >
+                        </div>
+
+                        <div class="scan-type-selector">
+                            <label class="radio-card">
+                                <input type="radio" name="scanType" value="default" checked>
+                                <div class="radio-content">
+                                    <div class="radio-icon">⚡</div>
+                                    <div class="radio-text">
+                                        <strong>Quick Scan</strong>
+                                        <span>Scan important ports (21, 22, 80, 443, etc.)</span>
+                                    </div>
+                                </div>
+                            </label>
+
+                            <label class="radio-card">
+                                <input type="radio" name="scanType" value="custom">
+                                <div class="radio-content">
+                                    <div class="radio-icon">🎯</div>
+                                    <div class="radio-text">
+                                        <strong>Custom Scan</strong>
+                                        <span>Specify your own ports to scan</span>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+
+                        <div id="customPortsDiv" class="custom-ports-section" style="display: none;">
+                            <label for="customPorts">Custom Ports (comma-separated)</label>
+                                <input 
+                                    type="text" 
+                                    id="customPorts" 
+                                    placeholder="80, 443, 8080, 3306, 5432"
+                                >
+                                <small>Enter port numbers separated by commas (e.g., 80, 443, 3306)</small>
+                        </div>
+
+                        <button type="submit" class="scan-button" id="scanButton">
+                            <span class="button-text">Start Scanning</span>
+                            <svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M5 12h14M12 5l7 7-7 7"/>
+                            </svg>
+                        </button>
+                    </form>
+
+                    <div id="loadingState" class="loading-state" style="display: none;">
+                        <div class="scanner-animation">
+                            <div class="pulse-ring"></div>
+                            <div class="pulse-ring delay-1"></div>
+                            <div class="pulse-ring delay-2"></div>
+                        </div>
+                        <p>Scanning network ports...</p>
+                    </div>
+
+                    <div id="resultsSection" class="results-section" style="display: none;">
+                        <div class="results-header">
+                            <h3>Scan Results</h3>
+                            <span class="timestamp" id="scanTimestamp"></span>
+                        </div>
+
+                        <div class="info-grid">
+                            <div class="info-card">
+                                <div class="info-label">Target URL</div>
+                                <div class="info-value" id="targetUrl"></div>
+                            </div>
+                            <div class="info-card">
+                                <div class="info-label">IP Address</div>
+                                <div class="info-value" id="ipAddress"></div>
+                            </div>
+                            <div class="info-card">
+                                <div class="info-label">Hosting Provider</div>
+                                <div class="info-value" id="hostingProvider"></div>
+                            </div>
+                            <div class="info-card">
+                                <div class="info-label">Location</div>
+                                <div class="info-value" id="location"></div>
+                            </div>
+                        </div>
+
+                        <div class="ports-container">
+                            <div class="ports-section open-ports">
+                                <div class="ports-header">
+                                    <h4>
+                                        <span class="status-dot open"></span>
+                                        Open Ports
+                                    </h4>
+                                    <span class="port-count" id="openPortCount">0</span>
+                                </div>
+                                <div class="ports-list" id="openPortsList"></div>
+                            </div>
+
+                            <div class="ports-section closed-ports">
+                                <div class="ports-header">
+                                    <h4>
+                                        <span class="status-dot closed"></span>
+                                        Closed Ports
+                                    </h4>
+                                    <span class="port-count" id="closedPortCount">0</span>
+                                </div>
+                                <div class="ports-list" id="closedPortsList"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="history-section" id="historySection" style="display: none;">
+                <div class="history-header">
+                    <h2>Scan History</h2>
+                    <button class="back-button" onclick="toggleHistory()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M19 12H5M12 19l-7-7 7-7"/>
+                        </svg>
+                        Back to Scanner
+                    </button>
+                </div>
+                <div id="historyList" class="history-list"></div>
+            </div>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
