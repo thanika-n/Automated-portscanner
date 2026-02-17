@@ -7,8 +7,6 @@
 
 A modern, full-featured web application for network port scanning with an intuitive UI, real-time results, and comprehensive scan history management.
 
-![PortScan Pro Interface](https://via.placeholder.com/800x400/0a0e27/00ff88?text=PortScan+Pro+Interface)
-
 ## ✨ Features
 
 - 🎯 **Dual Scan Modes**: Quick scan (18 common ports) or custom port selection
