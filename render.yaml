@@ -3,5 +3,10 @@ services:
     name: portscanner-pro
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: python app.py
+    startCommand: gunicorn app:app --bind 0.0.0.0:${PORT:-5000} --workers 1 --timeout 120
     plan: free
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: PYTHON_VERSION
+        value: 3.11.0
