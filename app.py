@@ -5,6 +5,7 @@ from datetime import datetime
 import sqlite3
 import json
 import requests
+import os
 from urllib.parse import urlparse
 
 app = Flask(__name__)
@@ -79,12 +80,17 @@ def get_hosting_provider(ip):
     return {'org': 'Unknown', 'isp': 'Unknown', 'country': 'Unknown', 'city': 'Unknown'}
 
 def scan_port(ip, port, timeout=3):
-    """Scan a single port"""
+    """Scan a single port with improved detection"""
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(timeout)
+        
+        # Set socket options for better detection
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        
         result = sock.connect_ex((ip, port))
         sock.close()
+        
         return port, result == 0
     except:
         return port, False
@@ -117,17 +123,10 @@ def scan():
         scan_type = data.get('scan_type', 'default')
         custom_ports = data.get('custom_ports', [])
         
-        # Validate URL
-        if not url:
-            return jsonify({'error': 'Please enter a URL or domain name'}), 400
-        
         # Get IP address
         ip = get_ip_address(url)
         if not ip:
-            return jsonify({
-                'error': 'Unable to resolve domain', 
-                'message': f'The domain "{url}" could not be found. Please check:\n• The domain name is spelled correctly\n• The website exists and is online\n• You have an active internet connection'
-            }), 400
+            return jsonify({'error': 'Unable to resolve IP address'}), 400
         
         # Get hosting provider
         hosting_info = get_hosting_provider(ip)
@@ -136,29 +135,10 @@ def scan():
         if scan_type == 'default':
             ports_to_scan = IMPORTANT_PORTS
         else:
-            if not custom_ports:
-                return jsonify({
-                    'error': 'No ports specified',
-                    'message': 'Please enter at least one port number for custom scan'
-                }), 400
             ports_to_scan = custom_ports
         
-        # Validate ports
-        invalid_ports = [p for p in ports_to_scan if p < 1 or p > 65535]
-        if invalid_ports:
-            return jsonify({
-                'error': 'Invalid port numbers',
-                'message': f'Port numbers must be between 1 and 65535. Invalid ports: {invalid_ports}'
-            }), 400
-        
         # Scan ports
-        try:
-            open_ports, closed_ports = scan_ports(ip, ports_to_scan)
-        except Exception as e:
-            return jsonify({
-                'error': 'Scanning failed',
-                'message': f'Unable to scan ports. This could be due to:\n• Network connectivity issues\n• Firewall blocking the scan\n• Target server refusing connections'
-            }), 500
+        open_ports, closed_ports = scan_ports(ip, ports_to_scan)
         
         # Save to database
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -184,10 +164,7 @@ def scan():
         })
     
     except Exception as e:
-        return jsonify({
-            'error': 'Unexpected error',
-            'message': f'An unexpected error occurred: {str(e)}'
-        }), 500
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/history', methods=['GET'])
 def get_history():
@@ -257,4 +234,6 @@ def get_scan_details(scan_id):
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    port = int(os.environ.get('PORT', 5000))
+    debug = os.environ.get('FLASK_ENV') != 'production'
+    app.run(debug=debug, host='0.0.0.0', port=port)
